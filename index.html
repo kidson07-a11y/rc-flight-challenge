@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RC Flight Challenge</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e3a8a);
+      color: white;
+      text-align: center;
+    }
+
+    header {
+      padding: 25px;
+    }
+
+    h1 {
+      font-size: 42px;
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      font-size: 18px;
+      color: #dbeafe;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      padding: 20px;
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    .category {
+      background: #facc15;
+      color: #111827;
+      font-weight: bold;
+      padding: 18px;
+      border-radius: 12px;
+      font-size: 18px;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tile {
+      background: #2563eb;
+      border: 3px solid #93c5fd;
+      color: #facc15;
+      font-size: 32px;
+      font-weight: bold;
+      padding: 30px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .tile:hover {
+      background: #1d4ed8;
+      transform: scale(1.04);
+    }
+
+    .tile.used {
+      background: #334155;
+      color: #64748b;
+      cursor: not-allowed;
+      border-color: #475569;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: white;
+      color: #111827;
+      width: 85%;
+      max-width: 700px;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 0 30px rgba(250, 204, 21, 0.7);
+    }
+
+    .modal-content h2 {
+      color: #1d4ed8;
+      margin-top: 0;
+    }
+
+    #questionText, #answerText {
+      font-size: 24px;
+      line-height: 1.4;
+    }
+
+    #answerText {
+      display: none;
+      color: #166534;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+
+    button {
+      margin: 10px;
+      padding: 12px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .show-answer {
+      background: #22c55e;
+      color: white;
+    }
+
+    .close {
+      background: #ef4444;
+      color: white;
+    }
+
+    .reset {
+      background: #facc15;
+      color: #111827;
+      margin-bottom: 25px;
+    }
+
+    footer {
+      padding: 15px;
+      color: #dbeafe;
+      font-size: 14px;
+    }
+
+    @media (max-width: 800px) {
+      .board {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 32px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>RC Flight Challenge!</h1>
+    <p class="subtitle">A LiPO Battery & Radio Control Systems Game Show</p>
+  </header>
+
+  <div class="board" id="gameBoard"></div>
+
+  <button class="reset" onclick="resetGame()">Reset Game</button>
+
+  <footer>
+    Click a point value, answer the question, then reveal the answer.
+  </footer>
+
+  <div class="modal" id="questionModal">
+    <div class="modal-content">
+      <h2 id="modalTitle"></h2>
+      <p id="questionText"></p>
+      <p id="answerText"></p>
+      <button class="show-answer" onclick="showAnswer()">Show Answer</button>
+      <button class="close" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
+  <script>
+    const categories = [
+      {
+        name: "LiPO Battery Basics",
+        questions: [
+          { points: 100, q: "What does LiPO stand for?", a: "Lithium Polymer" },
+          { points: 200, q: "What does the \"3S\" in a 3S battery mean?", a: "The battery has 3 cells connected in series." },
+          { points: 300, q: "What unit measures battery capacity?", a: "mAh, which means milliamp hours." },
+          { points: 400, q: "What is the safe percentage rule for LiPO batteries?", a: "The 80% Rule" },
+          { points: 500, q: "Why is it dangerous to over-discharge a LiPO battery?", a: "It can permanently damage the battery and become unsafe." }
+        ]
+      },
+      {
+        name: "Radio Control Systems",
+        questions: [
+          { points: 100, q: "What device does the pilot hold to control the aircraft?", a: "The transmitter" },
+          { points: 200, q: "What component receives signals inside the aircraft?", a: "The receiver" },
+          { points: 300, q: "What component controls motor speed?", a: "The Electronic Speed Controller, or ESC" },
+          { points: 400, q: "What type of motor is commonly used in RC aircraft?", a: "Brushless motor" },
+          { points: 500, q: "Explain the signal flow from the transmitter to the aircraft movement.", a: "The transmitter sends signals to the receiver, the receiver sends commands to the ESC and servos, and the motor or control surfaces respond." }
+        ]
+      },
+      {
+        name: "Safety & Performance",
+        questions: [
+          { points: 100, q: "What does voltage measure?", a: "Electrical pressure" },
+          { points: 200, q: "What does the C-rating describe?", a: "How quickly the battery can safely discharge energy." },
+          { points: 300, q: "What safety feature stops batteries from dropping too low in voltage?", a: "Low Voltage Cutoff" },
+          { points: 400, q: "What does mAh measure?", a: "Battery capacity and estimated flight time" },
+          { points: 500, q: "Explain why brushless motors are preferred in RC aircraft.", a: "They are more efficient, powerful, durable, and require less maintenance." }
+        ]
+      },
+      {
+        name: "Aircraft Components",
+        questions: [
+          { points: 100, q: "What motor moves the control surfaces?", a: "Servo motor" },
+          { points: 200, q: "What does propeller pitch affect?", a: "Speed and thrust" },
+          { points: 300, q: "What happens if the propeller pitch is too high?", a: "The motor may work too hard and overheat." },
+          { points: 400, q: "What is static equilibrium?", a: "When all forces are balanced." },
+          { points: 500, q: "Explain how the ESC and motor work together.", a: "The ESC regulates power from the battery to control the speed of the motor." }
+        ]
+      }
+    ];
+
+    const board = document.getElementById("gameBoard");
+    const modal = document.getElementById("questionModal");
+    const modalTitle = document.getElementById("modalTitle");
+    const questionText = document.getElementById("questionText");
+    const answerText = document.getElementById("answerText");
+    let currentTile = null;
+
+    function buildBoard() {
+      board.innerHTML = "";
+
+      categories.forEach(category => {
+        const categoryBox = document.createElement("div");
+        categoryBox.className = "category";
+        categoryBox.textContent = category.name;
+        board.appendChild(categoryBox);
+      });
+
+      for (let i = 0; i < 5; i++) {
+        categories.forEach(category => {
+          const item = category.questions[i];
+          const tile = document.createElement("div");
+          tile.className = "tile";
+          tile.textContent = item.points;
+          tile.onclick = () => openQuestion(category.name, item, tile);
+          board.appendChild(tile);
+        });
+      }
+    }
+
+    function openQuestion(category, item, tile) {
+      if (tile.classList.contains("used")) return;
+
+      currentTile = tile;
+      modalTitle.textContent = category + " — " + item.points;
+      questionText.textContent = item.q;
+      answerText.textContent = "Answer: " + item.a;
+      answerText.style.display = "none";
+      modal.style.display = "flex";
+    }
+
+    function showAnswer() {
+      answerText.style.display = "block";
+      if (currentTile) {
+        currentTile.classList.add("used");
+        currentTile.textContent = "✓";
+      }
+    }
+
+    function closeModal() {
+      modal.style.display = "none";
+    }
+
+    function resetGame() {
+      buildBoard();
+    }
+
+    buildBoard();
+  </script>
+</body>
+</html>
